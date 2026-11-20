@@ -299,6 +299,106 @@ int read_block(uint32_t block_no, uint8_t *data) {
     return 0;
 }
 
+
+#define CF2_MAGIC0               0x1e9e10f1
+#define CF2_MAGIC1               0x20227a79
+#define CFG_ARCADE_SCREEN_WIDTH  2102 // 0x0836
+#define CFG_ARCADE_SCREEN_HEIGHT 2103 // 0x0837
+#define SECTOR1_BASE             0x08004000
+#define SECTOR1_SIZE             (16 * 1024)
+#define CF2_SECTOR_OFFSET        0x3C00 // 0x08007C00 - 0x08004000
+
+static uint8_t early_app_buf[0x1000];
+static bool synced_this_transfer = false;
+
+static bool find_cf2_key(const uint32_t *cf2, uint32_t target_key, uint32_t *out_val) {
+    if (*(cf2 + 0) != CF2_MAGIC0 || *(cf2 + 1) != CF2_MAGIC1)
+        return false;
+    uint32_t num_entries = *(cf2 + 2);
+    if (num_entries > 120)
+        return false;
+    for (uint32_t i = 0; i < num_entries; i++) {
+        uint32_t k = *(cf2 + 4 + i * 2);
+        uint32_t v = *(cf2 + 4 + i * 2 + 1);
+        if (k == target_key) {
+            *out_val = v;
+            return true;
+        }
+    }
+    return false;
+}
+
+static void sync_arcade_screen_cfg(const uint8_t *buf, uint32_t len) {
+    const uint32_t *app_cf2 = NULL;
+    for (uint32_t off = 0; off + 32 <= len; off += 4) {
+        const uint32_t *p = (const uint32_t *)(buf + off);
+        if (*(p + 0) == CF2_MAGIC0 && *(p + 1) == CF2_MAGIC1) {
+            app_cf2 = p;
+            break;
+        }
+    }
+    if (!app_cf2)
+        return;
+
+    synced_this_transfer = true;
+
+    uint32_t new_w = 0, new_h = 0;
+    bool has_w = find_cf2_key(app_cf2, CFG_ARCADE_SCREEN_WIDTH, &new_w);
+    bool has_h = find_cf2_key(app_cf2, CFG_ARCADE_SCREEN_HEIGHT, &new_h);
+
+    const uint32_t *flash_cf2 = (const uint32_t *)(SECTOR1_BASE + CF2_SECTOR_OFFSET);
+    if (*(flash_cf2 + 0) != CF2_MAGIC0 || *(flash_cf2 + 1) != CF2_MAGIC1)
+        return;
+
+    uint32_t cur_w = 0, cur_h = 0;
+    bool cur_has_w = find_cf2_key(flash_cf2, CFG_ARCADE_SCREEN_WIDTH, &cur_w);
+    bool cur_has_h = find_cf2_key(flash_cf2, CFG_ARCADE_SCREEN_HEIGHT, &cur_h);
+
+    if (has_w == cur_has_w && has_h == cur_has_h &&
+        (!has_w || cur_w == new_w) && (!has_h || cur_h == new_h)) {
+        return;
+    }
+
+    static uint8_t sector_buf[SECTOR1_SIZE];
+    memcpy(sector_buf, (const void *)SECTOR1_BASE, SECTOR1_SIZE);
+
+    uint32_t *ram_cf2 = (uint32_t *)(sector_buf + CF2_SECTOR_OFFSET);
+    uint32_t count = *(ram_cf2 + 2);
+    if (count > 120)
+        return;
+
+    uint32_t write_idx = 0;
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t k = *(ram_cf2 + 4 + i * 2);
+        uint32_t v = *(ram_cf2 + 4 + i * 2 + 1);
+        if (k == CFG_ARCADE_SCREEN_WIDTH || k == CFG_ARCADE_SCREEN_HEIGHT)
+            continue;
+        *(ram_cf2 + 4 + write_idx * 2) = k;
+        *(ram_cf2 + 4 + write_idx * 2 + 1) = v;
+        write_idx++;
+    }
+
+    if (has_w) {
+        *(ram_cf2 + 4 + write_idx * 2) = CFG_ARCADE_SCREEN_WIDTH;
+        *(ram_cf2 + 4 + write_idx * 2 + 1) = new_w;
+        write_idx++;
+    }
+    if (has_h) {
+        *(ram_cf2 + 4 + write_idx * 2) = CFG_ARCADE_SCREEN_HEIGHT;
+        *(ram_cf2 + 4 + write_idx * 2 + 1) = new_h;
+        write_idx++;
+    }
+
+    for (uint32_t i = write_idx; i < count; i++) {
+        *(ram_cf2 + 4 + i * 2) = 0;
+        *(ram_cf2 + 4 + i * 2 + 1) = 0;
+    }
+    *(ram_cf2 + 2) = write_idx;
+    *(ram_cf2 + 3) = 4 + write_idx * 2;
+
+    flash_write(SECTOR1_BASE, sector_buf, SECTOR1_SIZE);
+}
+
 static void write_block_core(uint32_t block_no, const uint8_t *data, bool quiet,
                              WriteState *state) {
     const UF2_Block *bl = (const void *)data;
@@ -317,6 +417,17 @@ static void write_block_core(uint32_t block_no, const uint8_t *data, bool quiet,
         // this happens when we're trying to re-flash CURRENT.UF2 file previously
         // copied from a device; we still want to count these blocks to reset properly
     } else {
+        if (bl->blockNo == 0) {
+            memset(early_app_buf, 0, sizeof(early_app_buf));
+            synced_this_transfer = false;
+        }
+        if (bl->targetAddr >= APP_LOAD_ADDRESS && !synced_this_transfer) {
+            uint32_t rel_off = bl->targetAddr - APP_LOAD_ADDRESS;
+            if (rel_off + bl->payloadSize <= sizeof(early_app_buf)) {
+                memcpy(early_app_buf + rel_off, bl->data, bl->payloadSize);
+                sync_arcade_screen_cfg(early_app_buf, sizeof(early_app_buf));
+            }
+        }
         // logval("write block at", bl->targetAddr);
         DBG("Write block at %x", bl->targetAddr);
         flash_write(bl->targetAddr, bl->data, bl->payloadSize);
@@ -341,7 +452,7 @@ static void write_block_core(uint32_t block_no, const uint8_t *data, bool quiet,
             }
             if (state->numWritten >= state->numBlocks) {
                 // wait a little bit before resetting, to avoid Windows transmit error
-                // https://github.com/Microsoft/uf2-samd21/issues/11
+                // https://github.com
                 if (!quiet) {
                     uf2_timer_start(30);
                     isSet = true;

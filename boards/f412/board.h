@@ -2,8 +2,9 @@
 #define BOARD_H
 
 #define OSC_FREQ 8
-#define USBDEVICESTRING "Arcade F412"
-#define USBMFGSTRING "Contoso Ltd."
+#define USBDEVICESTRING "Arcade"
+#define USBMFGSTRING "ELECFREAKS"
+#define BOARD_ID "STM32F412-Arcade"
 #define BOARD_FLASH_SECTORS 8
 #define BOARD_FLASH_SIZE (512 * 1024)
 
@@ -12,42 +13,48 @@
 __attribute__((section(".config"))) __attribute__((used)) //
 const uint32_t configData[] = {
     /* CF2 START */
-    513675505, 539130489, // magic
-    29, 100,  // used entries, total entries
-    4, 0x20, // PIN_BTN_A = PC00
-    5, 0x21, // PIN_BTN_B = PC01
-    13, 0x10, // PIN_LED = PB00
-    33, 0x34, // PIN_DISPLAY_MISO = PD04
-    34, 0x35, // PIN_DISPLAY_MOSI = PD05
-    35, 0x37, // PIN_DISPLAY_CS = PD07
-    36, 0x50, // PIN_DISPLAY_DC = PF00
-    37, 0x140, // DISPLAY_WIDTH = 320
-    38, 0xf0, // DISPLAY_HEIGHT = 240
-    39, 0x8, // DISPLAY_CFG0 = 0x8
-    40, 0x18ff, // DISPLAY_CFG1 = 0x18ff
-    41, 0x1000004, // DISPLAY_CFG2 = 0x1000004
-    43, 0x3b, // PIN_DISPLAY_RST = PD11
-    44, 0x55, // PIN_DISPLAY_BL = PF05
-    47, 0x4, // PIN_BTN_LEFT = PA04
-    48, 0x29, // PIN_BTN_RIGHT = PC09
-    49, 0x15, // PIN_BTN_UP = PB05
-    50, 0x12, // PIN_BTN_DOWN = PB02
-    51, 0x110000, // PIN_BTN_MENU = 0x110000
-    60, 0x16, // PIN_JACK_TX = PB06
-    65, 0x8, // PIN_JACK_SND = PA08
-    66, 0x10, // PIN_JACK_BUSLED = PB00
-    67, 0x11, // PIN_JACK_COMMLED = PB01
-    78, 0x247d, // _78 = 9341
-    204, 0x80000, // FLASH_BYTES = 0x80000
-    205, 0x18000, // RAM_BYTES = 0x18000
-    208, 0x1f884ff3, // BOOTLOADER_BOARD_ID = 0x1f884ff3
-    209, 0x57755a57, // UF2_FAMILY = STM32F401
-    210, 0x10, // PINS_PORT_SIZE = PA_16
+    0x1e9e10f1, 0x20227a79, // magic
+    36, 100,                // 36 used entries (0x24), 100 total entries (0x64)
+    1, 0x14,                // 0x01 = 0x14
+    2, 0x1a,                // 0x02 = 0x1a
+    3, 0x13,                // 0x03 = 0x13
+    4, 0x20,                // 0x04 = 0x20 (PIN_BTN_A)
+    5, 0x21,                // 0x05 = 0x21 (PIN_BTN_B)
+    14, 0x07,               // 0x0e = 0x07
+    33, 0x25,               // 0x21 = 0x25
+    34, 0x22,               // 0x22 = 0x22
+    35, 0x1c,               // 0x23 = 0x1c
+    36, 0x23,               // 0x24 = 0x23
+    37, 0x140,              // 0x25 = 320 (CFG_DISPLAY_WIDTH)
+    38, 0xf0,               // 0x26 = 240 (CFG_DISPLAY_HEIGHT)
+    39, 0x08,               // 0x27 = 0x08 (CFG_DISPLAY_CFG0)
+    40, 0x10ff,             // 0x28 = 0x10ff (CFG_DISPLAY_CFG1)
+    41, 0x01000004,         // 0x29 = 0x01000004 (CFG_DISPLAY_CFG2)
+    43, 0x17,               // 0x2b = 0x17
+    44, 0x19,               // 0x2c = 0x19
+    47, 0x0f,               // 0x2f = 0x0f
+    48, 0x29,               // 0x30 = 0x29
+    49, 0x15,               // 0x31 = 0x15
+    50, 0x12,               // 0x32 = 0x12
+    51, 0x2d,               // 0x33 = 0x2d
+    60, 0x16,               // 0x3c = 0x16
+    64, 0x2a,               // 0x40 = 0x2a
+    65, 0x08,               // 0x41 = 0x08
+    70, 0x32,               // 0x46 = 0x32
+    75, 0x24,               // 0x4b = 0x24
+    76, 0x28,               // 0x4c = 0x28
+    78, 0x247d,             // 0x4e = 0x247d
+    81, 0x23,               // 0x51 = 0x23
+    204, 0x08080000,        // 0xcc = 0x08080000 (FLASH_BYTES)
+    205, 0x00040000,        // 0xcd = 0x00040000 (RAM_BYTES = 256 KB)
+    208, 0xe86b1a9b,        // 0xd0 = 0xe86b1a9b (BOOTLOADER_BOARD_ID)
+    209, 0x57755a57,        // 0xd1 = 0x57755a57 (UF2_FAMILY)
+    210, 0x10,              // 0xd2 = 0x10
+    214, 0x60,              // 0xd6 = 0x60
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     /* CF2 END */
 };
 #endif
