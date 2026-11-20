@@ -15,8 +15,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi make python3
+      - name: Patch libopencm3 Makefile for GNU Make 4.3+
+        run: sed -i 's/\\#/#/g' libopencm3/Makefile
       - name: Build f412 Bootloader
-        run: make BOARD=f412 CPUTYPE=STM32F412 SHELL=/bin/bash
+        run: make BOARD=f412 CPUTYPE=STM32F412
       - name: Upload Built Artifacts
         uses: actions/upload-artifact@v4
         with:
