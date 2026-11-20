@@ -23,6 +23,7 @@ void flash_bootloader(void) {
     cm_disable_interrupts();
 
     flash_unlock();
+    FLASH_SR |= 0xF3;
 
     uint32_t dst = 0x08000000;
 
@@ -50,11 +51,11 @@ void flash_bootloader(void) {
     optcr |= 0x00030000;
 
     if ((FLASH_OPTCR & 0x00030000) != 0x00030000) {
-        uint32_t optcr = FLASH_OPTCR;
-        optcr &= ~0x80000000;
-        optcr |= 0x00030000;
+        flash_unlock_option_bytes();
         flash_program_option_bytes(optcr);
     }
+
+    FLASH_SR |= 0xF3;
 
     // erase bootloader
     flash_erase_sector(0, FLASH_CR_PROGRAM_X32);
@@ -84,6 +85,7 @@ void flash_bootloader(void) {
 
     if (lookupCfg(CFG_BOOTLOADER_PROTECTION, 0)) {
         // write-protect
+        flash_unlock_option_bytes();
         optcr &= ~0x00030000;
         flash_program_option_bytes(optcr);
     }
@@ -102,6 +104,4 @@ void flash_bootloader(void) {
         led_on(LED_ACTIVITY);
         delay(100);
     }
-
-    // resetIntoBootloader();
 }
