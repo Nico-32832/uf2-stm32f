@@ -12,7 +12,7 @@ jobs:
       - name: Install Base Tools
         run: |
           apt-get update
-          apt-get install -y git make python3 curl xz-utils ca-certificates
+          apt-get install -y git make python3 python-is-python3 curl xz-utils ca-certificates
       - uses: actions/checkout@v4
         with:
           submodules: recursive
