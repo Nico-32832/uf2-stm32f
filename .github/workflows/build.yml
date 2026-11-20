@@ -14,23 +14,14 @@ jobs:
       - name: Install ARM Toolchain & Python
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi make python3
-      - name: Patch all libopencm3 Makefiles for GNU Make 4.3+
+          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi make python3 wget
+      - name: Install GNU Make 4.2.1 for Legacy libopencm3
         run: |
-          python3 -c '
-          import os
-          for root, _, files in os.walk("libopencm3"):
-              for fn in files:
-                  p = os.path.join(root, fn)
-                  try:
-                      s = open(p, "r", encoding="utf-8").read()
-                      if chr(92) + "#" in s:
-                          open(p, "w", encoding="utf-8").write(s.replace(chr(92) + "#", "#"))
-                  except Exception:
-                      pass
-          '
+          wget -q https://gnu.org
+          tar -xzf make-4.2.1.tar.gz
+          cd make-4.2.1 && ./configure --prefix=/usr/local && make -j4 && sudo make install
       - name: Build f412 Bootloader
-        run: make BOARD=f412 CPUTYPE=STM32F412 SHELL=/bin/bash
+        run: /usr/local/bin/make BOARD=f412 CPUTYPE=STM32F412 SHELL=/bin/bash
       - name: Upload Built Artifacts
         uses: actions/upload-artifact@v4
         with:
