@@ -7,7 +7,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: ubuntu:20.04
     steps:
+      - name: Install Base Tools
+        run: |
+          apt-get update
+          apt-get install -y git make python3 curl xz-utils ca-certificates
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -15,21 +20,6 @@ jobs:
         uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
           release: 10.3-2021.10
-      - name: Patch libopencm3 Makefiles after submodule check
-        run: |
-          make checksubmodules
-          python3 -c '
-          import os
-          for root, _, files in os.walk("libopencm3"):
-              for fn in files:
-                  p = os.path.join(root, fn)
-                  try:
-                      s = open(p, "r", encoding="utf-8").read()
-                      if chr(92) + "#" in s:
-                          open(p, "w", encoding="utf-8").write(s.replace(chr(92) + "#", "#"))
-                  except Exception:
-                      pass
-          '
       - name: Build libopencm3 (STM32F4 only)
         run: make -C libopencm3 TARGETS=stm32/f4 -j4 SHELL=/bin/bash
       - name: Build f412 Bootloader
