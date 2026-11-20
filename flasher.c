@@ -49,9 +49,11 @@ void flash_bootloader(void) {
     optcr &= ~0x80000000;
     optcr |= 0x00030000;
 
-    if (FLASH_OPTCR != optcr) {
+    if ((FLASH_OPTCR & 0x00030000) != 0x00030000) {
+        uint32_t optcr = FLASH_OPTCR;
+        optcr &= ~0x80000000;
+        optcr |= 0x00030000;
         flash_program_option_bytes(optcr);
-        resetIntoApp();
     }
 
     // erase bootloader
